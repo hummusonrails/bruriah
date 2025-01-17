@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-secondary text-white;
+  }
+}
+
+@font-face {
+  font-family: 'Bangers';
+  font-style: normal;
+  font-weight: 400;
+}
+
+h1, .intro, .chat-title, .message-text {
+  font-family: 'Bangers', sans-serif;
+}
