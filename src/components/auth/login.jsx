@@ -12,14 +12,14 @@ export function LoginForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
+  
     try {
       if (isLogin) {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-
+  
         if (error) {
           alert("Login failed: " + error.message);
         } else {
@@ -27,28 +27,55 @@ export function LoginForm() {
           navigate("/");
         }
       } else {
+        const { data: allowedEmails, error: allowedEmailsError } = await supabase
+          .from("allowed_emails")
+          .select("email")
+          .eq("email", email);
+  
+        if (allowedEmailsError) {
+          console.error("Error checking allowed emails:", allowedEmailsError.message);
+          alert("An unexpected error occurred. Please try again.");
+          return;
+        }
+  
+        if (allowedEmails.length === 0) {
+          alert("Your email is not authorized to create an account.");
+          return;
+        }
+  
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
         });
-
+  
         if (signUpError) {
           alert("Sign-up failed: " + signUpError.message);
         } else {
           const username = email.split("@")[0];
-
-          const { data: session, error: sessionError } = await supabase.auth.getSession();
-          if (sessionError || !session?.user) {
+  
+          let session = null;
+          for (let i = 0; i < 5; i++) { 
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) {
+              console.error("Error retrieving session:", sessionError.message);
+              await new Promise((resolve) => setTimeout(resolve, 500)); 
+            } else {
+              session = sessionData?.user ? sessionData : null;
+              break;
+            }
+          }
+  
+          if (!session?.user) {
             alert("Error retrieving session. Profile creation aborted.");
             return;
           }
-
+  
           const { user } = session;
-
+  
           const { error: profileError } = await supabase
             .from("profiles")
             .insert([{ auth_user_id: user.id, username }]);
-
+  
           if (profileError) {
             alert("Failed to save profile: " + profileError.message);
           } else {
@@ -63,7 +90,7 @@ export function LoginForm() {
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary p-4">
