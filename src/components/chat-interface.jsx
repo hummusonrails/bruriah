@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Send } from "lucide-react";
 import { UserMenu } from "./user-menu";
 import { supabase } from "../clients/supabaseClient";
+import ReactMarkdown from "react-markdown";
 
 export function ChatInterface() {
   const [messages, setMessages] = useState([]);
@@ -147,6 +148,12 @@ export function ChatInterface() {
         role: msg.role,
         content: msg.content,
       }));
+
+      const profileData = {
+        school: profile.school || "School not set",
+        city: profile.city || "City not set",
+        grade: profile.grade || "Grade level not set",
+      }
   
       const response = await fetch(
         `https://${import.meta.env.VITE_SUPABASE_PROJECT_REF}.functions.supabase.co/openai`,
@@ -156,7 +163,7 @@ export function ChatInterface() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({ prompt: inputValue.trim(), context }),
+          body: JSON.stringify({ prompt: inputValue.trim(), context, profileData }),
         }
       );
   
@@ -362,7 +369,7 @@ export function ChatInterface() {
                         : "bg-gray-700 text-gray-300"
                     }`}
                   >
-                    {message.content || (
+                    {<ReactMarkdown>{message.content}</ReactMarkdown> || (
                       <span className="animate-pulse text-gray-500">
                         Generating response...
                       </span>

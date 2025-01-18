@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, User, Home } from 'lucide-react';
 import { supabase } from "../clients/supabaseClient";
 
 export function UserMenu() {
@@ -80,7 +80,7 @@ export function UserMenu() {
       >
         {profile?.avatar_url ? (
           <img
-            src={profile.avatar_url}
+            src={profile.avatar_url || "/placeholder.png"}
             alt="Profile Avatar"
             className="w-full h-full rounded-full object-cover"
           />
@@ -97,6 +97,26 @@ export function UserMenu() {
             </div>
           </div>
           <button
+            onClick={() => {
+              setIsOpen(false);
+              navigate("/");
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-primary/20 flex items-center gap-2"
+          >
+            <Home size={16} />
+            Home
+          </button>
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              navigate("/profile");
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-primary/20 flex items-center gap-2"
+          >
+            <User size={16} />
+            Profile
+          </button>
+          <button
             onClick={handleSignOut}
             className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-primary/20 flex items-center gap-2"
           >
@@ -108,3 +128,4 @@ export function UserMenu() {
     </div>
   );
 }
+
