@@ -50,38 +50,36 @@ export function LoginForm() {
   
         if (signUpError) {
           alert("Sign-up failed: " + signUpError.message);
+          return;
+        }
+  
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+  
+        if (userError || !userData?.user) {
+          alert("User creation failed. Please try again.");
+          console.error("Error fetching user:", userError?.message);
+          return;
+        }
+  
+        const { user } = userData;
+        const username = email.split("@")[0];
+  
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert([
+            {
+              auth_user_id: user.id,
+              user_id: user.id,
+              username,
+            },
+          ]);
+  
+        if (profileError) {
+          console.error(`Failed to save profile: ${profileError.message}`);
+          alert("Failed to save profile. Please contact support.");
         } else {
-          const username = email.split("@")[0];
-  
-          let session = null;
-          for (let i = 0; i < 5; i++) { 
-            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError) {
-              console.error("Error retrieving session:", sessionError.message);
-              await new Promise((resolve) => setTimeout(resolve, 500)); 
-            } else {
-              session = sessionData?.user ? sessionData : null;
-              break;
-            }
-          }
-  
-          if (!session?.user) {
-            alert("Error retrieving session. Profile creation aborted.");
-            return;
-          }
-  
-          const { user } = session;
-  
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .insert([{ auth_user_id: user.id, username }]);
-  
-          if (profileError) {
-            alert("Failed to save profile: " + profileError.message);
-          } else {
-            alert("Sign-up successful! Check your email for verification.");
-            setIsLogin(true);
-          }
+          alert("Sign-up successful! Continue now to login.");
+          setIsLogin(true);
         }
       }
     } catch (err) {
