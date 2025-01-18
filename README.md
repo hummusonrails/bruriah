@@ -15,6 +15,7 @@ Bruriah is an AI-powered chat interface designed to provide a supportive and eng
 
 - **User Authentication**: Secure user sign-up, login, and logout using Supabase Auth.
 - **Persistent Chat History**: Each user can create and manage multiple chats, with chat histories stored in Supabase.
+- **Profile Context**: Personalize the chat context with student provided school, location and grade information.
 - **Real-time AI Responses**: Powered by OpenAI's GPT-4 model, providing conversational and educational support.
 - **Dynamic Profile Avatars**: Supports user-uploaded avatars or default initials.
 - **Customizable Chat Titles**: Rename chats directly from the sidebar.
@@ -116,6 +117,7 @@ npm run build
 3. **Chat with Bruriah**: Start chatting with Bruriah and receive AI-powered responses.
 4. **Rename Chat**: Click the chat title to rename the chat.
 5. **View Chat History**: Access previous messages and responses in the chat history.
+6. **Edit Profile**: Update your profile information, including your avatar, school name, location and grade.
 
 ## Contributing
 
