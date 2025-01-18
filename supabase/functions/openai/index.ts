@@ -3,8 +3,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import OpenAI from "https://deno.land/x/openai@v4.20.1/mod.ts";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Origin": "*", // Allow all origins
+  "Access-Control-Allow-Methods": "POST, OPTIONS", // Allow POST and OPTIONS methods
   "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
 };
 
@@ -19,7 +19,7 @@ serve(async (req) => {
       const body = await req.json();
       console.log("Parsed request body:", JSON.stringify(body, null, 2));
   
-      const { prompt, context = [] } = body;
+      const { prompt, context = [], profileData = {} } = body; 
   
       if (!prompt) {
         console.error("Error: Prompt input is missing.");
@@ -42,12 +42,25 @@ serve(async (req) => {
   
       const openai = new OpenAI({ apiKey });
   
+      const profileContextMessage = {
+        role: "system",
+        content: `Here is the user's profile context for better understanding:
+          - School: ${profileData.school || "School not set"}
+          - City: ${profileData.city || "City not set"}
+          - Grade: ${profileData.grade || "Grade level not set"}`,
+      };
+  
       const systemPrompt = `You are Bruriah, a highly intelligent and kind tutor for children. Your purpose is to assist kids in learning their school subjects in a patient, supportive, and engaging manner. Always provide thorough explanations and examples, and encourage curiosity and critical thinking. Adapt your responses to the child’s age and comprehension level, using language and tone that is appropriate for kids. Be encouraging and positive, ensuring that learning remains fun and rewarding.`;
   
       const messages = [
         { role: "system", content: systemPrompt },
-        ...context.map((msg) => ({ role: msg.role, content: msg.content })),
-        { role: "user", content: prompt }, 
+        profileContextMessage,
+        ...(Array.isArray(context)
+          ? context
+              .filter((msg) => msg && typeof msg.role === "string" && typeof msg.content === "string")
+              .map((msg) => ({ role: msg.role, content: msg.content }))
+          : []), 
+        { role: "user", content: prompt },
       ];
   
       const encoder = new TextEncoder();
