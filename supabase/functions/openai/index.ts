@@ -19,7 +19,7 @@ serve(async (req) => {
       const body = await req.json();
       console.log("Parsed request body:", JSON.stringify(body, null, 2));
   
-      const { prompt, context = [], profileData = {} } = body; 
+      const { prompt, context = [], profileData = {}, image_url = null } = body; 
   
       if (!prompt) {
         console.error("Error: Prompt input is missing.");
@@ -68,24 +68,41 @@ serve(async (req) => {
         async start(controller) {
           try {
             console.log("Initiating OpenAI streaming response...");
-  
+      
+            const messages = [
+              { role: "system", content: systemPrompt },
+              ...(Array.isArray(context)
+                ? context.map((msg) => ({
+                    role: msg.role,
+                    content: msg.content,
+                  }))
+                : []),
+              {
+                role: "user",
+                content: [
+                  ...(prompt ? [{ type: "text", text: prompt }] : []),
+                  ...(image_url ? [{ type: "image_url", image_url: { url: image_url } }] : []),
+                ],
+              },
+            ];
+      
             const response = await openai.chat.completions.create({
-              model: "gpt-4o-mini",
+              model: "gpt-4o",
               stream: true,
               messages,
             });
-  
+      
             for await (const chunk of response) {
               controller.enqueue(encoder.encode(chunk.choices[0].delta.content));
             }
-  
+      
             controller.close();
           } catch (error) {
             console.error("Error streaming response from OpenAI:", error);
             controller.error(error);
           }
         },
-      });
+      });      
   
       return new Response(responseStream, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },

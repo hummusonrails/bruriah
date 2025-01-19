@@ -11,6 +11,7 @@ export function ChatInterface() {
   const [profile, setProfile] = useState(null);
   const [chats, setChats] = useState([]);
   const [activeChat, setActiveChat] = useState(null);
+  const [uploadedImage, setUploadedImage] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -107,15 +108,14 @@ export function ChatInterface() {
     }
   };
   
-
   const sendMessage = async () => {
     if (!activeChat) {
       console.error("No active chat to send a message to.");
       return;
     }
   
-    if (!inputValue.trim()) {
-      console.error("Message cannot be empty.");
+    if (!inputValue.trim() && !uploadedImage) {
+      console.error("Message must include text or an image.");
       return;
     }
   
@@ -123,37 +123,58 @@ export function ChatInterface() {
     const assistantMessageId = (Date.now() + 1).toString();
   
     try {
-      const newUserMessage = {
-        id: userMessageId,
-        chat_id: activeChat.id,
-        role: "user",
-        content: inputValue.trim(),
-      };
-      setMessages((prevMessages) => [...prevMessages, newUserMessage]);
-      setInputValue(""); 
+      if (uploadedImage) {
+        const imageMessage = {
+          id: userMessageId,
+          chat_id: activeChat.id,
+          role: "user",
+          content: `![Uploaded Image](${uploadedImage})`,
+        };
   
-      await supabase.from("messages").insert({
-        chat_id: activeChat.id,
-        role: "user",
-        content: inputValue.trim(),
-      });
+        setMessages((prevMessages) => [...prevMessages, imageMessage]);
+  
+        await supabase.from("messages").insert(imageMessage);
+  
+        setUploadedImage(null);
+      }
+  
+      if (inputValue.trim()) {
+        const textMessage = {
+          id: Date.now().toString(),
+          chat_id: activeChat.id,
+          role: "user",
+          content: inputValue.trim(),
+        };
+  
+        setMessages((prevMessages) => [...prevMessages, textMessage]);
+  
+        await supabase.from("messages").insert(textMessage);
+  
+        setInputValue("");
+      }
   
       setMessages((prevMessages) => [
         ...prevMessages,
         { id: assistantMessageId, chat_id: activeChat.id, role: "assistant", content: "" },
       ]);
   
-      const maxContextMessages = 10; // Limit the number of context messages
-      const context = messages.slice(-maxContextMessages).map((msg) => ({
+      const context = messages.slice(-10).map((msg) => ({
         role: msg.role,
         content: msg.content,
       }));
-
+  
       const profileData = {
         school: profile.school || "School not set",
         city: profile.city || "City not set",
         grade: profile.grade || "Grade level not set",
-      }
+      };
+  
+      const payload = {
+        prompt: inputValue.trim(),
+        context,
+        profileData,
+        image_url: uploadedImage || null,
+      };
   
       const response = await fetch(
         `https://${import.meta.env.VITE_SUPABASE_PROJECT_REF}.functions.supabase.co/openai`,
@@ -163,7 +184,7 @@ export function ChatInterface() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           },
-          body: JSON.stringify({ prompt: inputValue.trim(), context, profileData }),
+          body: JSON.stringify(payload),
         }
       );
   
@@ -263,7 +284,44 @@ export function ChatInterface() {
     }
   };
   
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
   
+    try {
+      const fileName = `${user.id}-${Date.now()}`;
+      const { error: uploadError } = await supabase.storage
+        .from("chat-images")
+        .upload(fileName, file);
+  
+      if (uploadError) {
+        console.error("Error uploading image:", uploadError.message);
+        alert("Failed to upload image. Please try again.");
+        return;
+      }
+  
+      const { data: publicUrlData } = supabase.storage
+        .from("chat-images")
+        .getPublicUrl(fileName);
+  
+      if (publicUrlData?.publicUrl) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: Date.now().toString(),
+            chat_id: activeChat.id,
+            role: "user",
+            content: `![Uploaded Image](${publicUrlData.publicUrl})`,
+          },
+        ]);
+  
+        setUploadedImage(publicUrlData.publicUrl);
+      }
+    } catch (err) {
+      console.error("Unexpected error during image upload:", err);
+      alert("An unexpected error occurred. Please try again.");
+    }
+  };    
   
   return (
     <div className="flex h-screen">
@@ -369,11 +427,24 @@ export function ChatInterface() {
                         : "bg-gray-700 text-gray-300"
                     }`}
                   >
-                    {<ReactMarkdown>{message.content}</ReactMarkdown> || (
-                      <span className="animate-pulse text-gray-500">
-                        Generating response...
-                      </span>
-                    )}
+                    <ReactMarkdown
+                      components={{
+                        img: ({ node, ...props }) => (
+                          <img
+                            {...props}
+                            style={{
+                              maxWidth: "350px",
+                              maxHeight: "350px", 
+                              objectFit: "cover",
+                              borderRadius: "8px", 
+                            }}
+                            alt="Uploaded"
+                          />
+                        ),
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
                   </div>
                 </div>
               ))}
@@ -381,7 +452,6 @@ export function ChatInterface() {
           )}
         </div>
 
-  
         {/* Input area */}
         {activeChat && (
           <div className="border-t border-gray-800 p-4">
@@ -399,6 +469,15 @@ export function ChatInterface() {
                 placeholder="Message Bruriah..."
                 className="w-full bg-secondary border border-gray-700 rounded-lg py-3 px-4 pr-12 focus:outline-none focus:border-primary"
               />
+              <label className="absolute right-16 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                📷
+              </label>
               <button
                 onClick={sendMessage}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-primary"
