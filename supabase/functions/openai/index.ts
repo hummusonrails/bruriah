@@ -87,7 +87,7 @@ serve(async (req) => {
             ];
       
             const response = await openai.chat.completions.create({
-              model: "gpt-4o",
+              model: "o3-mini",
               stream: true,
               messages,
             });

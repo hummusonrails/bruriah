@@ -38,3 +38,7 @@ coverage
 .vite
 *.timestamp-*
 .vercel
+
+# Supabase
+.supabase
+supabase/.temp/cli-latest
